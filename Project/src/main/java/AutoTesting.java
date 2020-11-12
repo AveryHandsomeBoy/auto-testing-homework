@@ -21,6 +21,7 @@ import java.util.*;
 public class AutoTesting {
     // 方法级 map
     private static Map<String, Set<String>> methodMap = new HashMap<String, Set<String>>();
+
     // 存储发生变化的方法
     private static Set<String> changeMethods = new HashSet<String>();
 
@@ -31,7 +32,7 @@ public class AutoTesting {
      * @throws IOException
      * @throws InvalidClassFileException
      */
-    private static AnalysisScope getScope(String dirPath) throws IOException,InvalidClassFileException{
+    private static AnalysisScope getScope(String... dirPath) throws IOException,InvalidClassFileException{
         // 将分析域存到文件中
         File exFile = new FileProvider().getFile("exclusion.txt");
         AnalysisScope scope = AnalysisScopeReader.readJavaScope(
@@ -39,12 +40,14 @@ public class AutoTesting {
                 exFile, /*Path to exclusion file*/
                 AutoTesting.class.getClassLoader()
         );
-        // 把文件夹下的.class文件加入
-        File[] files = new File(dirPath).listFiles();
-        assert files != null;
-        for (File file: files) {
-            if(file.getName().endsWith(".class"))
-                scope.addClassFileToScope(ClassLoaderReference.Application, file );
+        for(String s:dirPath){
+            // 把文件夹下的.class文件加入
+            File[] files = new File(s).listFiles();
+            assert files != null;
+            for (File file: files) {
+                if(file.getName().endsWith(".class"))
+                    scope.addClassFileToScope(ClassLoaderReference.Application, file );
+            }
         }
         return scope;
     }
@@ -68,7 +71,7 @@ public class AutoTesting {
      * @return 图
      * @throws CancelException
      */
-    private static CHACallGraph getGraph(String dirPath) throws CancelException, IOException, InvalidClassFileException, ClassHierarchyException {
+    private static CHACallGraph getGraph(String... dirPath) throws CancelException, IOException, InvalidClassFileException, ClassHierarchyException {
         AnalysisScope scope = getScope(dirPath);
         ClassHierarchy cha = ClassHierarchyFactory.makeWithRoot(scope);
         Iterable<Entrypoint> eps = new AllApplicationEntrypoints(scope, cha);
@@ -182,14 +185,46 @@ public class AutoTesting {
                 }
             }
         }
-        System.out.println(changeClass);
         return resClass;
+    }
+    public static Map<String,Set<String>> getMap(String projectTarget,String changeInfoPath) throws CancelException, ClassHierarchyException, InvalidClassFileException, IOException {
+        String srcDirPath = projectTarget + "classes\\net\\mooctest"; // 代码文件夹
+        String testDirPath = projectTarget + "test-classes\\net\\mooctest"; // 测试文件文件夹
+        // 类级映射关系
+        Map<String,Set<String>> classMap = new HashMap<String, Set<String>>();
+
+        CHACallGraph cg = getGraph(srcDirPath,testDirPath);
+        for(CGNode node: cg) {
+            if(node.getMethod() instanceof ShrikeBTMethod) {
+                ShrikeBTMethod method = (ShrikeBTMethod) node.getMethod();
+                if("Application"
+                        .equals(method.getDeclaringClass().getClassLoader().toString())) {
+                    if(method.getSignature().contains(".<init>()V"))continue;// 去除init的情况
+                    if(method.getSignature().contains("$"))continue;
+                    if(!method.getSignature().contains("mooctest"))continue;// 去除init的情况
+                    String methodClassName = method.getDeclaringClass().getName().toString();
+                    for(CallSiteReference c: method.getCallSites()){
+                        String className = c.getDeclaredTarget().getDeclaringClass().getName().toString();
+                        if(!className.contains("mooctest"))continue;
+                        if(className.contains("$"))continue;
+                        if(classMap.containsKey(className)){
+                            classMap.get(className).add(methodClassName);
+                        }else{
+                            Set<String> addedSet = new HashSet<String>();
+                            addedSet.add(methodClassName);
+                            classMap.put(className,addedSet);
+                        }
+                    }
+                }
+            }
+        }
+        return classMap;
     }
 
     public static void main(String[] args) throws IOException, ClassHierarchyException, IllegalArgumentException, InvalidClassFileException, CancelException {
         String[] tasks = {"0-CMD","1-ALU","2-DataLog","3-BinaryHeap","4-NextDay","5-More Triangle"};
 
-        String projectName = tasks[2];
+        String projectName = tasks[0];
         String projectTarget = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\target\\";
         String changeInfoPath = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\change_info.txt";
         String outputDir = "C:\\Users\\18125\\Desktop\\";
@@ -197,7 +232,31 @@ public class AutoTesting {
         Set<String> resClass = getClassResult(projectTarget,changeInfoPath);
 
         // todo 输出.dot文件
-
+        // 输出类
+        Map<String,Set<String>> classMap = getMap(projectTarget,changeInfoPath);
+        File dotFile = new File(outputDir+"class-cfa.dot");
+        Writer out = new FileWriter(dotFile);
+        out.write("digraph myClass_class {\n");
+        for(String key:classMap.keySet()){
+            for(String value:classMap.get(key)){
+                out.write("\"" + key + "\""+ " -> " + "\""+ value + "\";\n");
+            }
+        }
+        out.write("}");
+        out.close();
+        // 输出方法
+        dotFile = new File(outputDir+"method-cfa.dot");
+        out = new FileWriter(dotFile);
+        out.write("digraph myMethod_class {\n");
+        for(String key:methodMap.keySet()){
+            if(key.contains("java"))continue;
+            for(String value:methodMap.get(key)){
+                if(value.contains("java"))continue;
+                out.write("\"" + key + "\""+ " -> " + "\""+ value + "\";\n");
+            }
+        }
+        out.write("}");
+        out.close();
         // 输出方法粒度的结果
         System.out.println("----------------------------------------");
         Set<String> ansMethods = Util.getFileSet("F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\selection-method.txt");
@@ -210,7 +269,7 @@ public class AutoTesting {
         }
         // 输出文件
         File file = new File(outputDir+"selection-method.txt");
-        Writer out = new FileWriter(file);
+        out = new FileWriter(file);
         for(String s:resMethods){
             out.write(s+"\n");
         }
