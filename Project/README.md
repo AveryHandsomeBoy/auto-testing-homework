@@ -1,4 +1,4 @@
-# 自动测试
+# 自动化测试
 ### 运行结果
 运行命令为
 java -jar AutoTesting.jar -m <project_target> <change_info>
