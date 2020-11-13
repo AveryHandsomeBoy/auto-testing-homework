@@ -18,6 +18,7 @@ public class CMDTest {
     String dataPath = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\";
     String projectTarget = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\target\\";
     String changeInfoPath = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\change_info.txt";
+
     @Test
     public void testMethod() throws IOException, ClassHierarchyException, InvalidClassFileException, CancelException {
         Set<String> testSet;
@@ -25,7 +26,7 @@ public class CMDTest {
         // 读取文件
         testSet = Util.getFileSet(dataPath+fileName);
         // 判断集合大小和里面的文件是否一致
-        Set<String> res = AutoTesting.getMethodResult(projectTarget,changeInfoPath);
+        Set<String> res = MethodTesting.getMethodResult(projectTarget,changeInfoPath);
         assertEquals(res.size(),testSet.size());
         for(String s:res){
             assert(testSet.contains(s));
@@ -38,7 +39,7 @@ public class CMDTest {
         // 读取文件
         testSet = Util.getFileSet(dataPath+fileName);
         // 判断集合大小和里面的文件是否一致
-        Set<String> res = AutoTesting.getClassResult(projectTarget,changeInfoPath);
+        Set<String> res = ClassTesting.getClassResult(projectTarget,changeInfoPath);
         assertEquals(res.size(),testSet.size());
         for(String s:res){
             assert(testSet.contains(s));
