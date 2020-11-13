@@ -29,8 +29,6 @@ public class AutoTesting {
      * 获得文件的分析域
      * @param dirPath 文件夹名称
      * @return 分析域
-     * @throws IOException
-     * @throws InvalidClassFileException
      */
     private static AnalysisScope getScope(String... dirPath) throws IOException,InvalidClassFileException{
         // 将分析域存到文件中
@@ -57,8 +55,8 @@ public class AutoTesting {
      * @param fallName
      */
     private static void dfs(String fallName){
-        if(!changeMethods.contains(fallName))changeMethods.add(fallName);
-        else return;
+        if(!changeMethods.contains(fallName))changeMethods.add(fallName);// 没搜索过的递归搜索
+        else return;// 已经搜索过的就不用搜索了
         if(!methodMap.containsKey(fallName))return;
         for(String s:methodMap.get(fallName)){
             dfs(s);
@@ -69,7 +67,6 @@ public class AutoTesting {
      * 获得图
      * @param dirPath 文件夹名
      * @return 图
-     * @throws CancelException
      */
     private static CHACallGraph getGraph(String... dirPath) throws CancelException, IOException, InvalidClassFileException, ClassHierarchyException {
         AnalysisScope scope = getScope(dirPath);
@@ -84,11 +81,7 @@ public class AutoTesting {
      * 获得方法级 受影响的测试用例
      * @param projectTarget
      * @param changeInfoPath
-     * @return
-     * @throws CancelException
-     * @throws ClassHierarchyException
-     * @throws InvalidClassFileException
-     * @throws IOException
+     * @return 受影响的测试用例
      */
     public static Set<String> getMethodResult(String projectTarget,String changeInfoPath) throws CancelException, ClassHierarchyException, InvalidClassFileException, IOException {
         String srcDirPath = projectTarget + "classes\\net\\mooctest"; // 代码文件夹
@@ -101,19 +94,17 @@ public class AutoTesting {
         for(CGNode node: srcCg){
             if(node.getMethod() instanceof ShrikeBTMethod) {
                 ShrikeBTMethod method = (ShrikeBTMethod) node.getMethod();
-                if("Application"
-                        .equals(method.getDeclaringClass().getClassLoader().toString())) {
-                    String nodeFallName = Util.getMethodFallName(method);
-                    for(CallSiteReference c: method.getCallSites()){
-                        String fallName = Util.getCallSiteFallName(c);
-                        // 加入方法集合
-                        if(methodMap.containsKey(fallName)){
-                            methodMap.get(fallName).add(nodeFallName);
-                        }else{
-                            Set<String> addedSet = new HashSet<String>();
-                            addedSet.add(nodeFallName);
-                            methodMap.put(fallName,addedSet);
-                        }
+                if(!Util.isMethodValid(method))continue;
+                String nodeFallName = Util.getMethodFallName(method);
+                for(CallSiteReference c: method.getCallSites()){
+                    String fallName = Util.getCallSiteFallName(c);
+                    // 加入方法集合
+                    if(methodMap.containsKey(fallName)){
+                        methodMap.get(fallName).add(nodeFallName);
+                    }else{
+                        Set<String> addedSet = new HashSet<String>();
+                        addedSet.add(nodeFallName);
+                        methodMap.put(fallName,addedSet);
                     }
                 }
             }
@@ -128,14 +119,11 @@ public class AutoTesting {
         for(CGNode node: cg) {
             if(node.getMethod() instanceof ShrikeBTMethod) {
                 ShrikeBTMethod method = (ShrikeBTMethod) node.getMethod();
-                if("Application"
-                        .equals(method.getDeclaringClass().getClassLoader().toString())) {
-                    if(method.getSignature().contains(".<init>()V"))continue;// 去除init的情况
-                    for(CallSiteReference c: method.getCallSites()){
-                        String fallName = Util.getCallSiteFallName(c);
-                        if(changeMethods.contains(fallName)){
-                            resMethods.add(Util.getMethodFallName(method));
-                        }
+                if(!Util.isMethodValid(method,".<init>()V"))continue;// 去掉init的情况
+                for(CallSiteReference c: method.getCallSites()){
+                    String fallName = Util.getCallSiteFallName(c);
+                    if(changeMethods.contains(fallName)){
+                        resMethods.add(Util.getMethodFallName(method));
                     }
                 }
             }
@@ -147,11 +135,7 @@ public class AutoTesting {
      * 获得方法级 受影响的测试用例
      * @param projectTarget
      * @param changeInfoPath
-     * @return
-     * @throws CancelException
-     * @throws ClassHierarchyException
-     * @throws InvalidClassFileException
-     * @throws IOException
+     * @return 受影响的测试用例
      */
     public static Set<String> getClassResult(String projectTarget,String changeInfoPath) throws CancelException, ClassHierarchyException, InvalidClassFileException, IOException {
 
@@ -172,22 +156,26 @@ public class AutoTesting {
         for(CGNode node: cg) {
             if(node.getMethod() instanceof ShrikeBTMethod) {
                 ShrikeBTMethod method = (ShrikeBTMethod) node.getMethod();
-                if("Application"
-                        .equals(method.getDeclaringClass().getClassLoader().toString())) {
-                    if(method.getSignature().contains(".<init>()V"))continue;// 去除init的情况
-                    for(CallSiteReference c: method.getCallSites()){
-                        String className = c.getDeclaredTarget().getDeclaringClass().getName().toString();
-                        if(changeClass.contains(className)) {
-                            resClass.add(Util.getMethodFallName(method));
-                            break;
-                        }
+                if(!Util.isMethodValid(method,".<init>()V"))continue;// 去掉init的情况
+                for(CallSiteReference c: method.getCallSites()){
+                    String className = c.getDeclaredTarget().getDeclaringClass().getName().toString();
+                    if(changeClass.contains(className)) {
+                        resClass.add(Util.getMethodFallName(method));
+                        break;
                     }
                 }
             }
         }
         return resClass;
     }
-    public static Map<String,Set<String>> getMap(String projectTarget,String changeInfoPath) throws CancelException, ClassHierarchyException, InvalidClassFileException, IOException {
+
+    /**
+     * 获得类级别的 dot文件中hashMap
+     * @param projectTarget
+     * @param changeInfoPath
+     * @return
+     */
+    public static Map<String,Set<String>> getClassMap(String projectTarget, String changeInfoPath) throws CancelException, ClassHierarchyException, InvalidClassFileException, IOException {
         String srcDirPath = projectTarget + "classes\\net\\mooctest"; // 代码文件夹
         String testDirPath = projectTarget + "test-classes\\net\\mooctest"; // 测试文件文件夹
         // 类级映射关系
@@ -197,28 +185,59 @@ public class AutoTesting {
         for(CGNode node: cg) {
             if(node.getMethod() instanceof ShrikeBTMethod) {
                 ShrikeBTMethod method = (ShrikeBTMethod) node.getMethod();
-                if("Application"
-                        .equals(method.getDeclaringClass().getClassLoader().toString())) {
-                    if(method.getSignature().contains(".<init>()V"))continue;// 去除init的情况
-                    if(method.getSignature().contains("$"))continue;
-                    if(!method.getSignature().contains("mooctest"))continue;// 去除init的情况
-                    String methodClassName = method.getDeclaringClass().getName().toString();
-                    for(CallSiteReference c: method.getCallSites()){
-                        String className = c.getDeclaredTarget().getDeclaringClass().getName().toString();
-                        if(!className.contains("mooctest"))continue;
-                        if(className.contains("$"))continue;
-                        if(classMap.containsKey(className)){
-                            classMap.get(className).add(methodClassName);
-                        }else{
-                            Set<String> addedSet = new HashSet<String>();
-                            addedSet.add(methodClassName);
-                            classMap.put(className,addedSet);
-                        }
+                if(!Util.isMethodValid(method,".<init>()V"))continue;// 去掉init的情况
+                if(!method.getSignature().contains("mooctest"))continue;        // 只要包含mooctest的情况
+                String methodClassName = method.getDeclaringClass().getName().toString();
+
+                for(CallSiteReference c: method.getCallSites()){
+                    String className = c.getDeclaredTarget().getDeclaringClass().getName().toString();
+                    if(!className.contains("mooctest")||className.contains("$"))continue;
+                    if(classMap.containsKey(className)){
+                        classMap.get(className).add(methodClassName);
+                    }else{
+                        Set<String> addedSet = new HashSet<String>();
+                        addedSet.add(methodClassName);
+                        classMap.put(className,addedSet);
                     }
                 }
             }
         }
         return classMap;
+    }
+
+    /**
+     * 获得类级别的 dot文件中hashMap
+     * @param projectTarget
+     * @param changeInfoPath
+     * @return
+     */
+    public static Map<String,Set<String>> getMethodMap(String projectTarget, String changeInfoPath) throws CancelException, ClassHierarchyException, InvalidClassFileException, IOException {
+        String srcDirPath = projectTarget + "classes\\net\\mooctest"; // 代码文件夹
+        String testDirPath = projectTarget + "test-classes\\net\\mooctest"; // 测试文件文件夹
+        // 类级映射关系
+        Map<String,Set<String>> dotMethodMap = new HashMap<String, Set<String>>();
+
+        CHACallGraph cg = getGraph(srcDirPath,testDirPath);
+        for(CGNode node: cg) {
+            if(node.getMethod() instanceof ShrikeBTMethod) {
+                ShrikeBTMethod method = (ShrikeBTMethod) node.getMethod();
+                if(!Util.isMethodValid(method))continue;
+                String nodeMethodName = method.getSignature();
+                for(CallSiteReference c: method.getCallSites()){
+                    String fallName = c.getDeclaredTarget().getSignature();
+                    if(!fallName.contains("mooctest")||fallName.contains("<init>"))continue;
+
+                    if(dotMethodMap.containsKey(fallName)){
+                        dotMethodMap.get(fallName).add(nodeMethodName);
+                    }else{
+                        Set<String> addedSet = new HashSet<String>();
+                        addedSet.add(nodeMethodName);
+                        dotMethodMap.put(fallName,addedSet);
+                    }
+                }
+            }
+        }
+        return dotMethodMap;
     }
 
     public static void main(String[] args) throws IOException, ClassHierarchyException, IllegalArgumentException, InvalidClassFileException, CancelException {
@@ -228,12 +247,13 @@ public class AutoTesting {
         String projectTarget = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\target\\";
         String changeInfoPath = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\change_info.txt";
         String outputDir = "C:\\Users\\18125\\Desktop\\";
+
         Set<String> resMethods = getMethodResult(projectTarget,changeInfoPath);
         Set<String> resClass = getClassResult(projectTarget,changeInfoPath);
 
-        // todo 输出.dot文件
-        // 输出类
-        Map<String,Set<String>> classMap = getMap(projectTarget,changeInfoPath);
+        //-------------------------dot---------------------------
+        //  输出.dot文件
+        Map<String,Set<String>> classMap = getClassMap(projectTarget,changeInfoPath);
         File dotFile = new File(outputDir+"class-cfa.dot");
         Writer out = new FileWriter(dotFile);
         out.write("digraph myClass_class {\n");
@@ -244,19 +264,20 @@ public class AutoTesting {
         }
         out.write("}");
         out.close();
-        // 输出方法
+        // 输出方法的dot文件 todo 这里直接用生成的methodMap了 可以考虑解耦一哈
+        Map<String,Set<String>> dotMethodMap = getMethodMap(projectTarget,changeInfoPath);
         dotFile = new File(outputDir+"method-cfa.dot");
         out = new FileWriter(dotFile);
         out.write("digraph myMethod_class {\n");
-        for(String key:methodMap.keySet()){
-            if(key.contains("java"))continue;
-            for(String value:methodMap.get(key)){
-                if(value.contains("java"))continue;
+        for(String key:dotMethodMap.keySet()){
+            for(String value:dotMethodMap.get(key)){
                 out.write("\"" + key + "\""+ " -> " + "\""+ value + "\";\n");
             }
         }
         out.write("}");
         out.close();
+
+        //-------------------------res---------------------------
         // 输出方法粒度的结果
         System.out.println("----------------------------------------");
         Set<String> ansMethods = Util.getFileSet("F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\selection-method.txt");

@@ -13,7 +13,8 @@ import static org.junit.Assert.assertEquals;
 public class CMDTest {
     String[] tasks = {"0-CMD","1-ALU","2-DataLog","3-BinaryHeap","4-NextDay","5-More Triangle"};
 
-    String projectName = tasks[2];
+    String projectName = tasks[3];// 修改索引测试不同的用例
+
     String dataPath = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\";
     String projectTarget = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\target\\";
     String changeInfoPath = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\change_info.txt";

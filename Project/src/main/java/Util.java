@@ -33,4 +33,24 @@ public class Util {
         return c.getDeclaredTarget().getDeclaringClass().getName().toString() + " " +  c.getDeclaredTarget().getSignature();
     }
 
+    /**
+     * 排除不合法的字符
+     * @param method
+     * @param invalidStr
+     * @return 方法是否合法
+     */
+    public static Boolean isMethodValid(ShrikeBTMethod method,String... invalidStr){
+        boolean containFlag = true;
+        for(String s:invalidStr){
+            if(!method.getSignature().contains(s)){
+                containFlag=false;
+                break;
+            }
+        }
+        return "Application".equals(method.getDeclaringClass().getClassLoader().toString()) &&
+                !method.getSignature().contains("<init>") &&
+                containFlag;
+
+    }
+
 }
