@@ -13,14 +13,24 @@ import com.ibm.wala.util.CancelException;
 import com.ibm.wala.util.config.AnalysisScopeReader;
 import com.ibm.wala.util.io.FileProvider;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class Util {
+    public static void printDot(String filePath, Map<String,Set<String>> map) throws IOException {
+        File file = new File(filePath);
+        Writer out = new FileWriter(file);
+        out.write("digraph myMethod_class {\n");
+        for(String key:map.keySet()){
+            for(String value:map.get(key)){
+                out.write("\"" + key + "\""+ " -> " + "\""+ value + "\";\n");
+            }
+        }
+        out.write("}");
+        out.close();
+    }
     /**
      * 获得文件的分析域
      * @param dirPath 文件夹名称
