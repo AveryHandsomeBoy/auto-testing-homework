@@ -10,10 +10,10 @@ import java.util.*;
 public class AutoTesting {
 
     public static void main(String[] args) throws IOException, ClassHierarchyException, IllegalArgumentException, InvalidClassFileException, CancelException {
-        String[] tasks = {"0-CMD","1-ALU","2-DataLog","3-BinaryHeap","4-NextDay","5-MoreTriangle"};
-        // 调试代码
+//        String[] tasks = {"0-CMD","1-ALU","2-DataLog","3-BinaryHeap","4-NextDay","5-MoreTriangle"};
+//         // 调试代码
 //        String type = "class";// 1为类级 2为方法级
-//        String projectName = tasks[5];
+//        String projectName = tasks[0];
 //        String projectTarget = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\target";
 //        String changeInfoPath = "F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\change_info.txt";
         if(args.length!=3){System.out.println("参数数量不对");return;}
@@ -66,7 +66,7 @@ public class AutoTesting {
         // 输出类粒度的结果
         System.out.println("----------------------------------------");
         Set<String> ansClass = Util.getFileSet("F:\\学习资料\\大三上\\自动化测试\\大作业\\ClassicAutomatedTesting\\"+projectName+"\\data\\selection-class.txt");
-        if(ansClass.size()!=resClass.size()) System.out.println("应该在结果里");
+        if(ansClass.size()!=resClass.size()) System.out.println("结果数量不对");
         for(String c:resClass){
             if(!ansClass.contains(c))System.out.println(c+"不应该在结果里");
         }

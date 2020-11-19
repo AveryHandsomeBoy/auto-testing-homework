@@ -44,6 +44,8 @@ public class MethodTesting {
         String testDirPath = projectTarget + "\\test-classes\\net\\mooctest"; // 测试文件夹
         // 存储相关的test方法（方法级）
         Set<String> resMethods = new HashSet<String>();
+        // 存储相关的test方法（方法级）
+        Set<String> resClass = new HashSet<String>();
         // 获得方法的文件分析域
         CHACallGraph srcCg = Util.getGraph(srcDirPath);
         // 填充methodMap
@@ -81,6 +83,7 @@ public class MethodTesting {
                     String fallName = Util.getCallSiteFallName(c);
                     if(changeMethods.contains(fallName)){
                         resMethods.add(Util.getMethodFallName(method));
+                        break;
                     }
                 }
             }

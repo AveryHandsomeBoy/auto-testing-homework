@@ -4,15 +4,13 @@ import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.cha.CHACallGraph;
 import com.ibm.wala.ipa.cha.ClassHierarchyException;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
+import com.ibm.wala.types.TypeName;
 import com.ibm.wala.util.CancelException;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ClassTesting {
     /**
@@ -23,6 +21,7 @@ public class ClassTesting {
      */
     public static Set<String> getClassResult(String projectTarget, String changeInfoPath) throws CancelException, ClassHierarchyException, InvalidClassFileException, IOException {
 
+        String srcDirPath = projectTarget + "\\classes\\net\\mooctest"; // 代码文件夹
         String testDirPath = projectTarget + "\\test-classes\\net\\mooctest"; // 测试文件夹
         // 存储发生变化的内部类
         Set<String> changeClass = new HashSet<String>();
@@ -35,6 +34,25 @@ public class ClassTesting {
         while ((line = bf.readLine()) != null) {
             changeClass.add(line.split(" ")[0].trim());
         }
+
+        // 获得方法的文件分析域
+        CHACallGraph srcCg = Util.getGraph(srcDirPath);
+        // 填充methodMap
+        for(CGNode node: srcCg){
+            if(node.getMethod() instanceof ShrikeBTMethod) {
+                ShrikeBTMethod method = (ShrikeBTMethod) node.getMethod();
+                if(!Util.isMethodValid(method))continue;
+                if(!changeClass.contains(method.getDeclaringClass().getName().toString())){
+                    continue;
+                }
+                for(CallSiteReference c: method.getCallSites()){
+                    String className = c.getDeclaredTarget().getDeclaringClass().getName().toString();
+
+                    changeClass.add(className);
+                }
+            }
+        }
+
         // 求出受到影响的test方法
         CHACallGraph cg = Util.getGraph(testDirPath);
         for(CGNode node: cg) {

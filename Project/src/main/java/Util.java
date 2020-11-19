@@ -112,7 +112,7 @@ public class Util {
             }
         }
         return "Application".equals(method.getDeclaringClass().getClassLoader().toString()) &&
-                !method.getSignature().contains("<init>") &&
+                !method.getSignature().contains("initialize") &&
                 containFlag;
 
     }
